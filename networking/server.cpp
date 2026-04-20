@@ -1,0 +1,121 @@
+// networking.cpp : This file contains the 'main' function. Program execution begins and ends there.
+//
+
+#include <iostream>
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <cstdlib>
+#include <thread>
+#include <cstring>
+#pragma comment(lib, "Ws2_32.lib")
+
+#define BACKLOG 10
+#define PORT "1080"
+#define NODE "10.64.115.108"
+using namespace std;
+
+void checker() {
+    WSAData wsaData;
+    int result = WSAStartup(MAKEWORD(2, 2), &wsaData);
+    if (result != 0) {
+        cout << "WSAStartup failed." << result << endl;
+    }
+    else {
+        cout << "WSAStartup works fine." << endl;
+    }
+}
+
+
+char get_port(struct sockaddr* sa) {
+    switch (sa->sa_family) {
+    case AF_INET:
+        return ((struct sockaddr_in*)sa)->sin_port;
+        break;
+    case AF_INET6:
+        return ((struct sockaddr_in6*)sa)->sin6_port;
+        break;
+    }
+};
+
+
+void* get_addrinf0(struct sockaddr* sa) {
+    if (sa->sa_family == AF_INET)
+        return &((struct sockaddr_in*)sa)->sin_addr;
+    if (sa->sa_family == AF_INET6)
+        return &((struct sockaddr_in6*)sa)->sin6_addr;
+    return nullptr;
+};
+
+
+void SimpleServer() {
+    cout << "SERVER" << endl;
+    const char yes = '1';
+    int err;
+    SOCKET sockfd;
+    SOCKET new_sockfd;
+    struct addrinfo hints, * res, * p;
+    struct sockaddr_storage their_addr;
+    int sin_size;
+    int result;
+    int listening;
+    char s[INET6_ADDRSTRLEN];
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_flags = AI_PASSIVE;
+    hints.ai_socktype = SOCK_STREAM;
+	cout << "setting" << endl;
+    if ((result = getaddrinfo(NODE, PORT, &hints, &res)) != 0) {
+        err = WSAGetLastError();
+        cout << "getaddrinfo error: " << err << endl;
+    }
+	cout << "getting" << endl;
+    for (p = res; p != NULL; p = p->ai_next) {
+		cout << "socket" << endl;
+        if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == SOCKET_ERROR) {
+            cout << "socket error: " << endl;
+            continue;
+        }
+        cout << "setsocket" << endl;
+        if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(char)) == SOCKET_ERROR)
+            continue;
+        cout << "bind" << endl;
+        if (bind(sockfd, p->ai_addr, p->ai_addrlen) == SOCKET_ERROR)
+            continue;
+        break;
+    }
+    if (p == NULL)
+        cout << "p error" << endl;
+
+    freeaddrinfo(res);
+	cout << "listening" << endl;
+    if ((listening = listen(sockfd, BACKLOG)) == SOCKET_ERROR) {
+        err = WSAGetLastError();
+        cout << "listen error: " << err << endl;
+    };
+	cout << "Waiting for connections..." << endl;
+    while (1) {
+		sin_size = sizeof their_addr;
+		cout << "accepting" << endl;
+        new_sockfd = accept(sockfd, (struct  sockaddr*)&their_addr, &sin_size);
+        if (new_sockfd == INVALID_SOCKET)
+            cout << "acceot error: " << WSAGetLastError() << endl;
+		cout << "accepted" << endl;
+        inet_ntop(their_addr.ss_family, get_addrinf0((struct sockaddr*)&their_addr), s, sizeof s);
+        cout << "Accepted connection from: " << s << endl;
+
+        const char* msg = "Hello World!";
+        int len = (int)strlen(msg), bytes_sent;
+        if ((bytes_sent = send(new_sockfd, msg, len, 0)) == SOCKET_ERROR)
+            cerr << "send error: " << WSAGetLastError() << endl;
+        closesocket(new_sockfd);
+    };
+};
+
+
+int main()
+{
+    checker();
+    SimpleServer();
+	WSACleanup(); // clean up after we're done with Winsock
+}
+
