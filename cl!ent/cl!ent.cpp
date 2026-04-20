@@ -40,26 +40,31 @@ void SimpleClient() {
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
-    cout << "setting" << endl;
     result = getaddrinfo(NODE, PORT, &hints, &res);
-    cout << "getting" << endl;
-    if (result != 0)
+    if (result != 0) {
         cerr << "getaddrinfo error: " << WSAGetLastError() << endl;
-    cout << "connecting" << endl;
+        return;
+    }
     for (p = res; p != NULL; p = p->ai_next) {
         sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
-        if (sockfd == INVALID_SOCKET)
+        if (sockfd == INVALID_SOCKET) {
             cerr << "socket error: " << WSAGetLastError() << endl;
-        if (connect(sockfd, p->ai_addr, p->ai_addrlen) == SOCKET_ERROR)
+            continue;
+        }
+        if (connect(sockfd, p->ai_addr, p->ai_addrlen) == SOCKET_ERROR) {
             cerr << "connect error: " << WSAGetLastError() << endl;
+            closesocket(sockfd);
+            continue;
+        }
         break;
     }
-    if (p == NULL)
-        cerr << "Failed to connect to server." << endl;
+    if (p == NULL) {
+        cerr << "Failed to connect to server: " << WSAGetLastError() << endl;
+        return;
+    }
     freeaddrinfo(res);
     char buf[1224];
     int len;
-    cout << "reeiving" << endl;
     int recievLen = recv(sockfd, buf, 1223, 0);
     if (recievLen == SOCKET_ERROR)
         cerr << "receive error: " << WSAGetLastError() << endl;

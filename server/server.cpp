@@ -14,6 +14,7 @@
 #define NODE "10.64.115.48"
 using namespace std;
 
+// This function checks if WSAStartup works fine and prints the result.
 void checker() {
     WSAData wsaData;
     int result = WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -25,19 +26,7 @@ void checker() {
     }
 }
 
-
-char get_port(struct sockaddr* sa) {
-    switch (sa->sa_family) {
-    case AF_INET:
-        return ((struct sockaddr_in*)sa)->sin_port;
-        break;
-    case AF_INET6:
-        return ((struct sockaddr_in6*)sa)->sin6_port;
-        break;
-    }
-};
-
-
+// This function gets the address information from a sockaddr structure, depending on the address family (IPv4 or IPv6).
 void* get_addrinf0(struct sockaddr* sa) {
     if (sa->sa_family == AF_INET)
         return &((struct sockaddr_in*)sa)->sin_addr;
@@ -63,22 +52,17 @@ void SimpleServer() {
     hints.ai_family = AF_UNSPEC;
     hints.ai_flags = AI_PASSIVE;
     hints.ai_socktype = SOCK_STREAM;
-    cout << "setting" << endl;
     if ((result = getaddrinfo(NODE, PORT, &hints, &res)) != 0) {
         err = WSAGetLastError();
         cout << "getaddrinfo error: " << err << endl;
     }
-    cout << "getting" << endl;
     for (p = res; p != NULL; p = p->ai_next) {
-        cout << "socket" << endl;
         if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == SOCKET_ERROR) {
             cout << "socket error: " << endl;
             continue;
         }
-        cout << "setsocket" << endl;
         if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(char)) == SOCKET_ERROR)
             continue;
-        cout << "bind" << endl;
         if (bind(sockfd, p->ai_addr, p->ai_addrlen) == SOCKET_ERROR)
             continue;
         break;
@@ -89,7 +73,6 @@ void SimpleServer() {
     }
 
     freeaddrinfo(res);
-    cout << "listening" << endl;
     if ((listening = listen(sockfd, BACKLOG)) == SOCKET_ERROR) {
         err = WSAGetLastError();
         cout << "listen error: " << err << endl;
@@ -98,13 +81,11 @@ void SimpleServer() {
     cout << "Waiting for connections..." << endl;
     while (1) {
         sin_size = sizeof their_addr;
-        cout << "accepting" << endl;
         new_sockfd = accept(sockfd, (struct  sockaddr*)&their_addr, &sin_size);
         if (new_sockfd == INVALID_SOCKET) {
             cout << "accept error: " << WSAGetLastError() << endl;
             return;
         }
-        cout << "accepted" << endl;
         inet_ntop(their_addr.ss_family, get_addrinf0((struct sockaddr*)&their_addr), s, sizeof s);
         cout << "Accepted connection from: " << s << endl;
 
