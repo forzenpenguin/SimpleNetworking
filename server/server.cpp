@@ -47,7 +47,6 @@ void SimpleServer() {
     int result;
     int listening;
     char s[INET6_ADDRSTRLEN];
-    struct timeval tv;
     fd_set readfds;
 	char buf[1024];
     memset(&hints, 0, sizeof hints);
