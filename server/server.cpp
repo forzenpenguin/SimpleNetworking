@@ -39,26 +39,27 @@ void* get_addrinf0(struct sockaddr* sa) {
 void SimpleServer() {
     cout << "SERVER" << endl;
     const char yes = '1';
-    int err;
     SOCKET sockfd;
-    SOCKET new_sockfd;
+    int new_sockfd;
     struct addrinfo hints, * res, * p;
     struct sockaddr_storage their_addr;
     int sin_size;
     int result;
     int listening;
     char s[INET6_ADDRSTRLEN];
+    struct timeval tv;
+    fd_set readfds;
+	char buf[1024];
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_UNSPEC;
     hints.ai_flags = AI_PASSIVE;
     hints.ai_socktype = SOCK_STREAM;
     if ((result = getaddrinfo(NODE, PORT, &hints, &res)) != 0) {
-        err = WSAGetLastError();
-        cout << "getaddrinfo error: " << err << endl;
+        cout << "getaddrinfo error: " << WSAGetLastError() << endl;
     }
     for (p = res; p != NULL; p = p->ai_next) {
-        if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == SOCKET_ERROR) {
-            cout << "socket error: " << endl;
+        if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == INVALID_SOCKET) {
+            cout << "socket error: " << WSAGetLastError() << endl;
             continue;
         }
         if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(char)) == SOCKET_ERROR)
@@ -74,11 +75,11 @@ void SimpleServer() {
 
     freeaddrinfo(res);
     if ((listening = listen(sockfd, BACKLOG)) == SOCKET_ERROR) {
-        err = WSAGetLastError();
-        cout << "listen error: " << err << endl;
+        cout << "listen error: " << WSAGetLastError() << endl;
 		return;
     };
     cout << "Waiting for connections..." << endl;
+    FD_ZERO(&readfds);
     while (1) {
         sin_size = sizeof their_addr;
         new_sockfd = accept(sockfd, (struct  sockaddr*)&their_addr, &sin_size);
@@ -86,13 +87,28 @@ void SimpleServer() {
             cout << "accept error: " << WSAGetLastError() << endl;
             return;
         }
+		FD_SET(new_sockfd, &readfds);
+        int n = new_sockfd + 1;
+        int rv = select(n, &readfds, NULL, NULL, NULL);
         inet_ntop(their_addr.ss_family, get_addrinf0((struct sockaddr*)&their_addr), s, sizeof s);
-        cout << "Accepted connection from: " << s << endl;
+        if (rv == SOCKET_ERROR) {
+            cout << "select error: " << WSAGetLastError() << endl;
+            return;
+        }
+        for (int i = 0; i < n; i++) {
+            if (FD_ISSET(i, &readfds)) {
+				int bytes_received = recv(i, buf, sizeof buf, 0);
+                buf[bytes_received] = '\0';
+				cout << s << ": " << string(buf, bytes_received) << endl;
+                cout << "==============================================" << endl;
+				buf[0] = '\0';
+            }
+		}
 
-        const char* msg = "Hello World!";
-        int len = (int)strlen(msg), bytes_sent;
-        if ((bytes_sent = send(new_sockfd, msg, len, 0)) == SOCKET_ERROR)
-            cerr << "send error: " << WSAGetLastError() << endl;
+        //const char* msg = "Hello World!";
+        //int len = (int)strlen(msg), bytes_sent;
+        //if ((bytes_sent = send(new_sockfd, msg, len, 0)) == SOCKET_ERROR)
+        //    cerr << "send error: " << WSAGetLastError() << endl;
         closesocket(new_sockfd);
     };
 };

@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <thread>
 #include <cstring>
+#include <string>
 #pragma comment(lib, "Ws2_32.lib")
 
 #define BACKLOG 10
@@ -63,16 +64,23 @@ void SimpleClient() {
         return;
     }
     freeaddrinfo(res);
-    char buf[1224];
-    int len;
-    int recievLen = recv(sockfd, buf, 1223, 0);
-    if (recievLen == SOCKET_ERROR)
-        cerr << "receive error: " << WSAGetLastError() << endl;
-    buf[recievLen] = '\0';
-    cout << "end" << endl;
-    cout << "Received: " << buf << endl;
+    //char buf[1224];
+    //int len;
+    //int recievLen = recv(sockfd, buf, 1223, 0);
+    //if (recievLen == SOCKET_ERROR)
+    //    cerr << "receive error: " << WSAGetLastError() << endl;
+    //buf[recievLen] = '\0';
+    //cout << "end" << endl;
+    //cout << "Received: " << buf << endl;
 
-}
+    std::string msg;
+	cout << "Typing: ";
+    getline(cin, msg);
+    int len = (int)msg.size(), bytes_sent;
+    if ((bytes_sent = send(sockfd, msg.c_str(), len, 0)) == SOCKET_ERROR)
+        cerr << "send error: " << WSAGetLastError() << endl;
+    closesocket(sockfd);
+};
 int main()
 {
     checker();
