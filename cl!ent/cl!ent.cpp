@@ -39,7 +39,7 @@ void SimpleClient() {
     int result;
     int sockfd;
     fd_set readfd;
-	fd_set writefd;
+    fd_set writefd;
     char buf[1024];
 	char s[INET6_ADDRSTRLEN];
     memset(&hints, 0, sizeof hints);
@@ -50,6 +50,7 @@ void SimpleClient() {
         cerr << "getaddrinfo error: " << WSAGetLastError() << endl;
         return;
     }
+    cout << "connecting " << endl;
     for (p = res; p != NULL; p = p->ai_next) {
         sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
         if (sockfd == INVALID_SOCKET) {
@@ -69,13 +70,19 @@ void SimpleClient() {
     }
     freeaddrinfo(res);
     FD_ZERO(&readfd);
-	FD_ZERO(&writefd);
+    FD_ZERO(&writefd);
+	FD_SET(sockfd, &readfd);
+	FD_SET(sockfd, &writefd);
     int rv = select(sockfd + 1, &readfd, &writefd, NULL, NULL);
     if (rv == SOCKET_ERROR) {
         cout << "select error: " << WSAGetLastError() << endl;
         return;
     }
+    if ((send(sockfd, "Hello there", 11, 0)) == SOCKET_ERROR)
+        cerr << "send error: " << WSAGetLastError() << endl;
     while (true) {
+        string msg;
+
         if (FD_ISSET(sockfd, &readfd)) {
             int recievLen = recv(sockfd, buf, 1023, 0);
             if (recievLen == SOCKET_ERROR)
@@ -84,14 +91,15 @@ void SimpleClient() {
 			inet_ntop(p->ai_family, get_addrinf0((struct sockaddr*)p->ai_addr), s, sizeof s);
             cout <<s << ": " << buf << endl;
 			buf[0] = '\0';
-        };
-        if (FD_ISSET(sockfd, &writefd)) {
-            std::string msg;
+			cout << "-----------------------------" << endl;
             cout << "Typing: ";
             getline(cin, msg);
+        };
+        if (!msg.empty() && FD_ISSET(sockfd, &writefd)) {
             int len = (int)msg.size(), bytes_sent;
             if ((bytes_sent = send(sockfd, msg.c_str(), len, 0)) == SOCKET_ERROR)
                 cerr << "send error: " << WSAGetLastError() << endl;
+            msg = "";
         }
     }
     closesocket(sockfd);

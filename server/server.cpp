@@ -6,6 +6,7 @@
 #include <ws2tcpip.h>
 #include <cstdlib>
 #include <thread>
+#include <string>
 #include <cstring>
 #pragma comment(lib, "Ws2_32.lib")
 
@@ -48,6 +49,7 @@ void SimpleServer() {
     int listening;
     char s[INET6_ADDRSTRLEN];
     fd_set readfds;
+	fd_set writefds;
 	char buf[1024];
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_UNSPEC;
@@ -79,6 +81,7 @@ void SimpleServer() {
     };
     cout << "Waiting for connections..." << endl;
     FD_ZERO(&readfds);
+	FD_ZERO(&writefds);
     while (1) {
         sin_size = sizeof their_addr;
         new_sockfd = accept(sockfd, (struct  sockaddr*)&their_addr, &sin_size);
@@ -86,30 +89,41 @@ void SimpleServer() {
             cout << "accept error: " << WSAGetLastError() << endl;
             return;
         }
-		FD_SET(new_sockfd, &readfds);
-        int n = new_sockfd + 1;
-        int rv = select(n, &readfds, NULL, NULL, NULL);
         inet_ntop(their_addr.ss_family, get_addrinf0((struct sockaddr*)&their_addr), s, sizeof s);
+		cout << "Got connection from " << s << endl;
+        int bytes_received = recv(new_sockfd, buf, sizeof buf, 0);
+        buf[bytes_received] = '\0';
+        cout << s << ": " << buf << endl;
+		FD_SET(new_sockfd, &readfds);
+        FD_SET(new_sockfd, &writefds);
+        int n = new_sockfd + 1;
+        int rv = select(n, &readfds, &writefds, NULL, NULL);
         if (rv == SOCKET_ERROR) {
             cout << "select error: " << WSAGetLastError() << endl;
             return;
         }
-        for (int i = 0; i < n; i++) {
-            if (FD_ISSET(i, &readfds)) {
-				int bytes_received = recv(i, buf, sizeof buf, 0);
+        string msg = "";
+        while (true) {
+            if (FD_ISSET(new_sockfd, &readfds)) {
+                int bytes_received = recv(new_sockfd, buf, sizeof buf, 0);
                 buf[bytes_received] = '\0';
-				cout << s << ": " << string(buf, bytes_received) << endl;
+                cout << s << ": " << buf << endl;
                 cout << "==============================================" << endl;
-				buf[0] = '\0';
+                if (buf[0] != '\0') {
+                    cout << "Typing: ";
+                    getline(cin, msg);
+                }
+                buf[0] = '\0';
             }
-		}
-
-        //const char* msg = "Hello World!";
-        //int len = (int)strlen(msg), bytes_sent;
-        //if ((bytes_sent = send(new_sockfd, msg, len, 0)) == SOCKET_ERROR)
-        //    cerr << "send error: " << WSAGetLastError() << endl;
+            if (!msg.empty() && FD_ISSET(new_sockfd, &writefds)) {
+                int len = (int)msg.size(), bytes_sent;
+                if ((bytes_sent = send(new_sockfd, msg.c_str(), len, 0)) == SOCKET_ERROR)
+                    cerr << "send error: " << WSAGetLastError() << endl;
+                msg = "";
+            }
+        }
         closesocket(new_sockfd);
-    };
+    }
 };
 
 
