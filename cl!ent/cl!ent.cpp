@@ -50,7 +50,6 @@ void SimpleClient() {
         cerr << "getaddrinfo error: " << WSAGetLastError() << endl;
         return;
     }
-    cout << "connecting " << endl;
     for (p = res; p != NULL; p = p->ai_next) {
         sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
         if (sockfd == INVALID_SOCKET) {
@@ -71,17 +70,18 @@ void SimpleClient() {
     freeaddrinfo(res);
     FD_ZERO(&readfd);
     FD_ZERO(&writefd);
-	FD_SET(sockfd, &readfd);
-	FD_SET(sockfd, &writefd);
-    int rv = select(sockfd + 1, &readfd, &writefd, NULL, NULL);
-    if (rv == SOCKET_ERROR) {
-        cout << "select error: " << WSAGetLastError() << endl;
-        return;
-    }
+
     if ((send(sockfd, "Hello there", 11, 0)) == SOCKET_ERROR)
         cerr << "send error: " << WSAGetLastError() << endl;
     while (true) {
-        string msg;
+        FD_SET(sockfd, &readfd);
+        FD_SET(sockfd, &writefd);
+        int rv = select(sockfd + 1, &readfd, &writefd, NULL, NULL);
+        if (rv == SOCKET_ERROR) {
+            cout << "select error: " << WSAGetLastError() << endl;
+            return;
+        }
+        string msg = "";
 
         if (FD_ISSET(sockfd, &readfd)) {
             int recievLen = recv(sockfd, buf, 1023, 0);
@@ -95,7 +95,7 @@ void SimpleClient() {
             cout << "Typing: ";
             getline(cin, msg);
         };
-        if (!msg.empty() && FD_ISSET(sockfd, &writefd)) {
+        if (msg != "" && FD_ISSET(sockfd, &writefd)) {
             int len = (int)msg.size(), bytes_sent;
             if ((bytes_sent = send(sockfd, msg.c_str(), len, 0)) == SOCKET_ERROR)
                 cerr << "send error: " << WSAGetLastError() << endl;

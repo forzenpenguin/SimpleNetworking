@@ -90,10 +90,6 @@ void SimpleServer() {
             return;
         }
         inet_ntop(their_addr.ss_family, get_addrinf0((struct sockaddr*)&their_addr), s, sizeof s);
-		cout << "Got connection from " << s << endl;
-        int bytes_received = recv(new_sockfd, buf, sizeof buf, 0);
-        buf[bytes_received] = '\0';
-        cout << s << ": " << buf << endl;
 		FD_SET(new_sockfd, &readfds);
         FD_SET(new_sockfd, &writefds);
         int n = new_sockfd + 1;
@@ -115,7 +111,7 @@ void SimpleServer() {
                 }
                 buf[0] = '\0';
             }
-            if (!msg.empty() && FD_ISSET(new_sockfd, &writefds)) {
+            if (msg != "" && FD_ISSET(new_sockfd, &writefds)) {
                 int len = (int)msg.size(), bytes_sent;
                 if ((bytes_sent = send(new_sockfd, msg.c_str(), len, 0)) == SOCKET_ERROR)
                     cerr << "send error: " << WSAGetLastError() << endl;
