@@ -41,7 +41,7 @@ void SimpleClient() {
     fd_set readfd;
     fd_set writefd;
     char buf[1024];
-	char s[INET6_ADDRSTRLEN];
+    char s[INET6_ADDRSTRLEN];
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
@@ -88,10 +88,10 @@ void SimpleClient() {
             if (recievLen == SOCKET_ERROR)
                 cerr << "receive error: " << WSAGetLastError() << endl;
             buf[recievLen] = '\0';
-			inet_ntop(p->ai_family, get_addrinf0((struct sockaddr*)p->ai_addr), s, sizeof s);
-            cout <<s << ": " << buf << endl;
-			buf[0] = '\0';
-			cout << "-----------------------------" << endl;
+            inet_ntop(p->ai_family, get_addrinf0((struct sockaddr*)p->ai_addr), s, sizeof s);
+            cout << s << ": " << buf << endl;
+            buf[0] = '\0';
+            cout << "-----------------------------" << endl;
             cout << "Typing: ";
             getline(cin, msg);
         };
@@ -117,7 +117,7 @@ protected:
     string msg = "";
 
 private:
-	// member functions
+    // member functions
     void checker() {
         WSAData wsadata;
         if (WSAStartup(MAKEWORD(2, 2), &wsadata) != 0) {
@@ -135,9 +135,9 @@ private:
         return nullptr;
     };
 public:
-	// constructor and destructor
+    // constructor and destructor
     client(const char* ip_param, const char* port_param) {
-		checker();
+        checker();
         cout << "CLIENT" << endl;
         memset(&hints, 0, sizeof hints);
         hints.ai_family = AF_UNSPEC;
@@ -165,35 +165,33 @@ public:
             return;
         }
         freeaddrinfo(res);
-        if ((send(sockfd, "Hello there", 11, 0)) == SOCKET_ERROR)
-            cerr << "send error: " << WSAGetLastError() << endl;
-	};
+    };
     ~client() {
         closesocket(sockfd);
         WSACleanup();
     }
-	// member functions continues
+    // member functions continues
 private:
     void sendMessage() {
         int len = (int)msg.size(), bytes_sent;
         if ((bytes_sent = send(sockfd, msg.c_str(), len, 0)) == SOCKET_ERROR)
             cerr << "send error: " << WSAGetLastError() << endl;
         msg = "";
-	}
+    }
 public:
     void receiveMessage() {
-		fd_set readfd;
-		fd_set writefd;
+        fd_set readfd;
+        fd_set writefd;
         FD_ZERO(&readfd);
         FD_ZERO(&writefd);
         FD_SET(sockfd, &readfd);
         FD_SET(sockfd, &writefd);
-		int rv = select(sockfd + 1, &readfd, &writefd, NULL, NULL); // I hardcoded the first parameter to be sockfd + 1 because it's the only socket we're monitoring, but in a more complex client with multiple sockets, this should be set to the highest socket descriptor plus one.
+        int rv = select(sockfd + 1, &readfd, &writefd, NULL, NULL); // I hardcoded the first parameter to be sockfd + 1 because it's the only socket we're monitoring, but in a more complex client with multiple sockets, this should be set to the highest socket descriptor plus one.
         if (rv == SOCKET_ERROR) {
             cout << "select error: " << WSAGetLastError() << endl;
             return;
         }
-           
+
         if (FD_ISSET(sockfd, &readfd)) {
             int recievLen = recv(sockfd, buf, 1023, 0);
             if (recievLen == SOCKET_ERROR)
@@ -215,11 +213,11 @@ public:
 
 int main()
 {
- //   checker();
- //   SimpleClient();
-	//WSACleanup(); // clean up after we're done with Winsock
+    //   checker();
+    //   SimpleClient();
+       //WSACleanup(); // clean up after we're done with Winsock
     client myClient("10.56.57.48", "1080");
     while (true) {
         myClient.receiveMessage();
-	}
+    }
 }
