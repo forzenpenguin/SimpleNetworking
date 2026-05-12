@@ -9,8 +9,6 @@
 #pragma comment(lib, "Ws2_32.lib")
 
 #define BACKLOG 10
-#define PORT "1080"
-#define NODE "10.56.57.48"
 using namespace std;
 
 class server {
